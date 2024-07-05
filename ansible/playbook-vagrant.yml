@@ -2,3 +2,6 @@
 
 - name: 'Run playbook-install_k3s.yml'
   ansible.builtin.import_playbook: playbook-install_k3s.yml
+
+- name: 'Run playbook-stackrox_installation.yml'
+  ansible.builtin.import_playbook: playbook-stackrox_installation.yml
