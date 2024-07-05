@@ -1,4 +1,4 @@
-# k3s_vagrant_libvirt_ansible
+# stackrox_on_k3s_vagrant_libvirt_ansible
 
 Vagrant-libvirt setup that creates a VM with [k3s](https://k3s.io/), the minimal
 lightweight Kubernetes distribution.
