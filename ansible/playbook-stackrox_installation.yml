@@ -72,7 +72,7 @@
       notify:
         - 'Find out the name of the pod in the central deployment'
         - 'Run roxctl command to create the init-bundle'
-        - 'Store stackrox-init-bundle in groups_vars file'
+        - 'Store stackrox-init-bundle in file on Ansible control host'
 
     - name: 'Wait until all pods are running (Part 1)'
       delegate_to: 'localhost'
@@ -111,7 +111,7 @@
           central init-bundles generate stackrox-init-bundle --output -
       register: roxctl_output
 
-    - name: 'Store stackrox-init-bundle in groups_vars file'
+    - name: 'Store stackrox-init-bundle in file on Ansible control host'
       delegate_to: 'localhost'
       ansible.builtin.template:
         src: 'stackrox_init_bundle.yml.j2'
