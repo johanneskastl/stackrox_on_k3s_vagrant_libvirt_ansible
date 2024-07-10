@@ -88,6 +88,45 @@
       retries: 24
       delay: 10
 
+    - name: 'Flush handlers to create and store init-bundle'
+      ansible.builtin.meta: flush_handlers
+
+    - name: 'Install StackRox Secured Cluster Services via the helm chart'
+      delegate_to: 'localhost'
+      kubernetes.core.helm:
+        chart_repo_url: https://raw.githubusercontent.com/stackrox/helm-charts/main/opensource/
+        chart_ref: stackrox-secured-cluster-services
+        release_name: stackrox-secured-cluster-services
+        release_namespace: stackrox
+        values_files:
+          - "{{ playbook_dir }}/stackrox_init_bundle.yml"
+        release_values:
+          clusterName: k3s1
+          centralEndpoint: "central.stackrox.svc:443"
+          sensor:
+            resources:
+              requests:
+                memory: 500Mi
+                cpu: 500m
+              limits:
+                memory: 500Mi
+                cpu: 500m
+
+    - name: 'Wait until all pods are running (Part 2)'
+      delegate_to: 'localhost'
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: stackrox
+      register: pod_list
+      until: |
+        pod_list | json_query("resources[*].status.phase") | unique | sort == ["Running"]
+        or
+        pod_list | json_query("resources[*].status.phase") | unique | sort == ["Running", "Succeeded"]
+      retries: 24
+      delay: 10
+
+
   handlers:
 
     - name: 'Find out the name of the pod in the central deployment'
