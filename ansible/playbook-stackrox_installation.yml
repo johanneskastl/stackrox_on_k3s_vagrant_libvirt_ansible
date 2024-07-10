@@ -127,6 +127,34 @@
       retries: 24
       delay: 10
 
+    - name: 'Create ingressrouteTCP for the StackRox WebUI'
+      delegate_to: 'localhost'
+      kubernetes.core.k8s:
+        state: 'present'
+        resource_definition: |
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRouteTCP
+          metadata:
+            name: stackrox-webui-passthrough
+            namespace: stackrox
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: HostSNI(`*`)
+                services:
+                  - name: central
+                    port: 443
+
+    - name: 'StackRox URL'
+      delegate_to: 'localhost'
+      ansible.builtin.debug:
+        msg: "Connect to the following URL in your browser: https://{{ hostvars['k3s1']['ansible_default_ipv4']['address'] }}.sslip.io"
+
+    - name: 'StackRox Admin credentials'
+      delegate_to: 'localhost'
+      ansible.builtin.debug:
+        msg: "Log in with the following credentials: user 'admin' with password 'vagrant-libvirt-totally-insecure'"
 
   handlers:
 
