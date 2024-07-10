@@ -70,6 +70,7 @@
                 memory: 2500Mi
                 cpu: 2000m
       notify:
+        - 'Check if the init-bundle file already exists'
         - 'Find out the name of the pod in the central deployment'
         - 'Run roxctl command to create the init-bundle'
         - 'Store stackrox-init-bundle in file on Ansible control host'
@@ -129,6 +130,12 @@
 
   handlers:
 
+    - name: 'Check if the init-bundle file already exists'
+      delegate_to: 'localhost'
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/stackrox_init_bundle.yml"
+      register: check_for_init_bundle_file
+
     - name: 'Find out the name of the pod in the central deployment'
       delegate_to: 'localhost'
       kubernetes.core.k8s_info:
@@ -138,6 +145,8 @@
         label_selectors:
           - app=central
       register: central_pod
+      when:
+        - not check_for_init_bundle_file.stat.exists
 
     - name: 'Run roxctl command to create the init-bundle'
       delegate_to: 'localhost'
@@ -149,6 +158,8 @@
           --password vagrant-libvirt-totally-insecure
           central init-bundles generate stackrox-init-bundle --output -
       register: roxctl_output
+      when:
+        - not check_for_init_bundle_file.stat.exists
 
     - name: 'Store stackrox-init-bundle in file on Ansible control host'
       delegate_to: 'localhost'
@@ -156,3 +167,5 @@
         src: 'stackrox_init_bundle.yml.j2'
         dest: "{{ playbook_dir }}/stackrox_init_bundle.yml"
         mode: 0600
+      when:
+        - not check_for_init_bundle_file.stat.exists
