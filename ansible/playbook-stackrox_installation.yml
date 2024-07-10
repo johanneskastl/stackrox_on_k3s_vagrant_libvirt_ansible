@@ -1,0 +1,85 @@
+---
+
+- name: 'Install StackRox'
+  hosts: 'k3s1'
+  gather_facts: true
+  become: false
+  module_defaults:
+    kubernetes.core.helm:
+      kubeconfig: './k3s-kubeconfig'
+    kubernetes.core.k8s:
+      kubeconfig: './k3s-kubeconfig'
+    kubernetes.core.k8s_info:
+      kubeconfig: './k3s-kubeconfig'
+    kubernetes.core.k8s_exec:
+      kubeconfig: './k3s-kubeconfig'
+
+  tasks:
+
+    - name: 'Create the stackrox namespace'
+      delegate_to: 'localhost'
+      kubernetes.core.k8s:
+        name: 'stackrox'
+        api_version: 'v1'
+        kind: 'Namespace'
+        state: 'present'
+
+    - name: 'Install StackRox Central Services via the helm chart'
+      delegate_to: 'localhost'
+      kubernetes.core.helm:
+        chart_repo_url: https://raw.githubusercontent.com/stackrox/helm-charts/main/opensource/
+        chart_ref: stackrox-central-services
+        release_name: stackrox-central-services
+        release_namespace: stackrox
+        release_values:
+          env:
+            openshift: false
+            istio: false
+            platform: "default"
+          central:
+            telemetry:
+              enabled: false
+            persistence:
+              none: true
+            adminPassword:
+              value: vagrant-libvirt-totally-insecure
+            resources:
+              requests:
+                memory: 1Gi
+                cpu: 1
+              limits:
+                memory: 4Gi
+                cpu: 1
+            db:
+              resources:
+                requests:
+                  memory: 1Gi
+                  cpu: 500m
+                limits:
+                  memory: 4Gi
+                  cpu: 1
+          scanner:
+            autoscaling:
+              disable: true
+            replicas: 1
+            resources:
+              requests:
+                memory: 500Mi
+                cpu: 500m
+              limits:
+                memory: 2500Mi
+                cpu: 2000m
+
+    - name: 'Wait until all pods are running (Part 1)'
+      delegate_to: 'localhost'
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: stackrox
+      register: pod_list
+      until: |
+        pod_list | json_query("resources[*].status.phase") | unique | sort == ["Running"]
+        or
+        pod_list | json_query("resources[*].status.phase") | unique | sort == ["Running", "Succeeded"]
+      retries: 24
+      delay: 10
