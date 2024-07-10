@@ -69,6 +69,10 @@
               limits:
                 memory: 2500Mi
                 cpu: 2000m
+      notify:
+        - 'Find out the name of the pod in the central deployment'
+        - 'Run roxctl command to create the init-bundle'
+        - 'Store stackrox-init-bundle in groups_vars file'
 
     - name: 'Wait until all pods are running (Part 1)'
       delegate_to: 'localhost'
@@ -83,3 +87,33 @@
         pod_list | json_query("resources[*].status.phase") | unique | sort == ["Running", "Succeeded"]
       retries: 24
       delay: 10
+
+  handlers:
+
+    - name: 'Find out the name of the pod in the central deployment'
+      delegate_to: 'localhost'
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: stackrox
+        label_selectors:
+          - app=central
+      register: central_pod
+
+    - name: 'Run roxctl command to create the init-bundle'
+      delegate_to: 'localhost'
+      kubernetes.core.k8s_exec:
+        namespace: stackrox
+        pod: "{{ central_pod.resources[0].metadata.name }}"
+        command: >
+          roxctl --insecure-skip-tls-verify
+          --password vagrant-libvirt-totally-insecure
+          central init-bundles generate stackrox-init-bundle --output -
+      register: roxctl_output
+
+    - name: 'Store stackrox-init-bundle in groups_vars file'
+      delegate_to: 'localhost'
+      ansible.builtin.template:
+        src: 'stackrox_init_bundle.yml.j2'
+        dest: "{{ playbook_dir }}/stackrox_init_bundle.yml"
+        mode: 0600
