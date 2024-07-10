@@ -6,3 +6,6 @@ Vagrantfile.1
 
 # ignore kubeconfig fetched from the machine
 ansible/k3s-kubeconfig
+
+# ignore the init bundle
+ansible/stackrox_init_bundle.yml
